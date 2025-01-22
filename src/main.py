@@ -1,26 +1,21 @@
-# Importa as funções
+# Importa as funções necessárias
 from functions import start_browser, fetch_coin_data
 
-# Lista de URLs das moedas
-urls = [
-    "https://coinmarketcap.com/currencies/bitcoin/",
-    "https://coinmarketcap.com/currencies/ethereum/",
-]
+# Dicionário com nomes das moedas e suas URLs
+coin_mapping = {
+    "BTC": "https://coinmarketcap.com/currencies/bitcoin/",
+    "ETH": "https://coinmarketcap.com/currencies/ethereum/",
+}
 
 # Inicia o navegador
 browser = start_browser()
 
-# Dicionário para armazenar os resultados
-coin_mapping = {}
-
-# Busca os dados para cada URL
-for url in urls:
-    name, value = fetch_coin_data(browser, url)
-    if name and value:
-        coin_mapping[name] = value
+# Busca os dados
+results = fetch_coin_data(browser, coin_mapping)
+print('Compilando dados...')
 
 # Fecha o navegador
 browser.quit()
 
-# Exibe o resultado
-print(coin_mapping)
+# Exibe os resultados
+print(results)
