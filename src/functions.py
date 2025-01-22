@@ -9,6 +9,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from openpyxl import load_workbook
+from openpyxl import load_workbook
+from openpyxl.utils import range_boundaries
+from openpyxl.worksheet.table import Table
 
 # Variável global para armazenar a instância do navegador
 browser = None
@@ -49,7 +52,7 @@ def fetch_coin_data(browser, coin_mapping):
             browser.get(url)
             
             # Aguarda até que o valor esteja visível na página (Timeout em 10 segundos)
-            wait = WebDriverWait(browser, 10)
+            wait = WebDriverWait(browser, 30)
             value_element = wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="section-coin-overview"]/div[2]/span')))
             
             # Reencontrar o elemento (garante que o elemento não está "obsoleto")
@@ -71,32 +74,90 @@ def fetch_coin_data(browser, coin_mapping):
     
     return results
 
+from openpyxl import load_workbook
+from openpyxl.utils import range_boundaries
+from openpyxl.worksheet.table import Table
 
-def append_to_excel(mapping, file_path="coin_data.xlsx", sheet_name="data"):
+def update_table_in_excel(mapping, file_path="coin_data.xlsx", sheet_name="data", table_name="coins"):
     """
-    Adiciona os dados do mapeamento à planilha existente no arquivo Excel.
+    Atualiza os dados de uma tabela no Excel com base em um dicionário, apagando os dados existentes e inserindo os novos.
+    
     :param mapping: Dicionário com nomes das moedas como chaves e valores como valores.
     :param file_path: Caminho do arquivo Excel.
-    :param sheet_name: Nome da planilha no arquivo Excel.
+    :param sheet_name: Nome da planilha onde a tabela está localizada.
+    :param table_name: Nome da tabela a ser atualizada.
     """
     try:
-        # Carrega o workbook existente
+        # Carrega o arquivo Excel
         wb = load_workbook(file_path)
-        
-        # Verifica se a planilha existe
         if sheet_name not in wb.sheetnames:
             raise ValueError(f"A planilha '{sheet_name}' não existe no arquivo '{file_path}'.")
         
-        ws = wb[sheet_name]  # Seleciona a planilha
+        ws = wb[sheet_name]
+        
+        # Localiza a tabela pela propriedade ref
+        table = None
+        for t in ws.tables.values():
+            if t.name == table_name:
+                table = t
+                break
+        
+        if not table:
+            raise ValueError(f"A tabela '{table_name}' não foi encontrada na planilha '{sheet_name}'.")
 
-        # Insere os dados do mapeamento
+        # Determina os limites da tabela (intervalo de células)
+        min_col, min_row, max_col, max_row = range_boundaries(table.ref)
+        
+        # Limpa os dados existentes na tabela (excluindo o cabeçalho)
+        for row in ws.iter_rows(min_row=min_row + 1, max_row=max_row, min_col=min_col, max_col=max_col):
+            for cell in row:
+                cell.value = None
+        
+        # Insere os novos dados dentro da tabela
+        current_row = min_row + 1
         for name, value in mapping.items():
-            ws.append([name, value])
+            ws.cell(row=current_row, column=min_col, value=name)  # Nome da moeda
+            ws.cell(row=current_row, column=min_col + 1, value=value)  # Valor da moeda
+            current_row += 1
 
-        # Salva as alterações no arquivo
+        # Atualiza o intervalo da tabela para incluir os novos dados
+        table.ref = f"{chr(64 + min_col)}{min_row}:{chr(64 + max_col)}{current_row - 1}"
+
+        # Salva as alterações
         wb.save(file_path)
-        print(f"Dados adicionados à planilha '{sheet_name}' no arquivo '{file_path}'.")
+        print(f"Dados atualizados na tabela '{table_name}' da planilha '{sheet_name}' no arquivo '{file_path}'.")
     except FileNotFoundError:
-        print(f"Arquivo '{file_path}' não encontrado. Certifique-se de que ele existe.")
+        print(f"Arquivo '{file_path}' não encontrado.")
     except ValueError as e:
         print(e)
+    except Exception as e:
+        print(f"Erro inesperado: {e}")
+
+
+def format_mapping_for_excel(coin_mapping):
+    """
+    Formata os valores no mapeamento removendo o símbolo de dólar ($),
+    excluindo as vírgulas de milhares e substituindo os pontos por vírgulas.
+
+    :param coin_mapping: Dicionário com nomes das moedas como chaves e valores como strings.
+                         Exemplo: {"BTC": "$1,234.56", "ETH": "$567.89"}
+    :return: Novo dicionário com os valores formatados.
+             Exemplo: {"BTC": "1234,56", "ETH": "567,89"}
+    """
+    formatted_mapping = {}
+
+    print('Formatando dados...')
+    
+    for name, value in coin_mapping.items():
+        if value:
+            # Remove o símbolo de dólar
+            formatted_value = value.replace("$", "")
+            # Remove as vírgulas de milhares
+            formatted_value = formatted_value.replace(",", "")
+            # Substitui os pontos por vírgulas
+            formatted_value = formatted_value.replace(".", ",")
+            formatted_mapping[name] = formatted_value
+        else:
+            formatted_mapping[name] = None  # Caso o valor seja inválido
+
+    return formatted_mapping

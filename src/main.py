@@ -1,5 +1,5 @@
 # Importa as funções necessárias
-from functions import start_browser, fetch_coin_data, append_to_excel
+from functions import start_browser, fetch_coin_data, update_table_in_excel, format_mapping_for_excel
 
 # Dicionário com nomes das moedas e suas URLs
 coin_mapping = {
@@ -13,11 +13,11 @@ coin_mapping = {
     "HNT": "https://coinmarketcap.com/currencies/helium/",
     "PENDLE": "https://coinmarketcap.com/currencies/pendle/",
     "LDO": "https://coinmarketcap.com/currencies/lido-dao/",
-    "OP": "https://coinmarketcap.com/currencies/optimism/",
+    "OP": "https://coinmarketcap.com/currencies/optimism-ethereum/",
     "RON": "https://coinmarketcap.com/currencies/ronin/",
     "STX": "https://coinmarketcap.com/currencies/stacks/",
     "WIF": "https://coinmarketcap.com/currencies/dogwifhat/",
-    "IMX": "https://coinmarketcap.com/currencies/immutablex/",
+    "IMX": "https://coinmarketcap.com/currencies/immutable-x/",
     "DRIFT": "https://coinmarketcap.com/currencies/drift/",
     "ENA": "https://coinmarketcap.com/currencies/ethena/",
     "JUP": "https://coinmarketcap.com/currencies/jupiter/",
@@ -43,8 +43,10 @@ print('Compilando dados...')
 # Fecha o navegador
 browser.quit()
 
+results_formated = format_mapping_for_excel(results)
+
 # Adiciona os dados na planilha "data" do arquivo "coin_data.xlsx"
-append_to_excel(results, file_path="coin_data.xlsx", sheet_name="data")
+update_table_in_excel(results_formated, file_path="coin_data.xlsx", sheet_name="data", table_name="coins")
 
 # Exibe os resultados
-print(results)
+print(results_formated)
